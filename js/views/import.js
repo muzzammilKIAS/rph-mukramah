@@ -16,7 +16,7 @@
   const LABEL = { 'calendar-kpm': 'Kalendar akademik KPM', calendar: 'Takwim sekolah', timetable: 'Jadual waktu', classes: 'Kelas & bilangan murid', curriculum: 'DSKP', rpt: 'RPT', history: 'Contoh RPH lama', backup: 'Backup / pakej data' };
   const IMPORTABLE = ['calendar', 'calendar-kpm', 'timetable', 'classes', 'curriculum', 'rpt', 'history'];
   const TYPE_CHIPS = { '.pdf': 'PDF', '.docx': 'DOCX', '.pptx': 'PPTX', '.xlsx': 'Excel', '.xls': 'Excel', '.csv': 'CSV', '.json': 'JSON', '.txt': 'Teks', '.png': 'Gambar', '.jpg': 'Gambar', '.jpeg': 'Gambar' };
-  const ACCEPT_ALL = '.pdf,.docx,.pptx,.xlsx,.xls,.csv,.json,.txt,.png,.jpg,.jpeg,.webp';
+  const ACCEPT_ALL = '.pdf,.docx,.pptx,.xlsx,.xls,.csv,.json,.txt,.png,.jpg,.jpeg,.webp,.zip';
   const DOW = [1, 2, 3, 4, 5, 6];
   const PAGE = 80;
 
@@ -176,7 +176,7 @@
     const zone = h('div', { class: 'imp-drop', tabindex: '0', role: 'button', 'aria-label': 'Pilih atau lepaskan fail untuk diimport' },
       icon('upload', 28),
       h('div', { class: 'imp-drop-title' }, 'Lepaskan fail di sini atau klik untuk memilih (boleh banyak fail)'),
-      h('div', { class: 'muted small' }, 'Takwim, jadual waktu, senarai kelas, DSKP, RPT, contoh RPH lama, templat Excel atau backup JSON. Jenis fail dikenal pasti secara automatik — anda boleh menukarnya.'),
+      h('div', { class: 'muted small' }, 'Takwim, jadual waktu, senarai kelas, DSKP, RPT, contoh RPH lama, templat Excel, backup JSON — atau satu fail ZIP yang mengandungi semuanya. Jenis fail dikenal pasti secara automatik — anda boleh menukarnya.'),
       chips(ACCEPT_ALL));
     const pick = async () => addFiles(await pickFiles(ACCEPT_ALL));
     zone.addEventListener('click', pick);
@@ -186,9 +186,40 @@
     zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('imp-drop-over'); addFiles([...(e.dataTransfer.files || [])]); });
     return h('section', { class: 'card imp-drop-card' }, h('div', { class: 'card-body' }, zone));
   }
+  /** Fail .zip → kandungannya (termasuk zip dalam zip, 2 aras). Folder & fail sistem dilangkau; format lama .doc/.ppt kekal supaya guru nampak cara membetulkannya. */
+  async function expandZips(files) {
+    if (!files.some(f => /\.zip$/i.test(f.name))) return files;
+    if (typeof window.JSZip !== 'function') { toast('Pembaca ZIP (JSZip) tidak dimuatkan — ekstrak zip dahulu.', 'error', 6000); return files.filter(f => !/\.zip$/i.test(f.name)); }
+    const ok = new Set([...((RPH.readers && RPH.readers.supported) || []), '.doc', '.ppt']);
+    const MAX = 300 * 1048576;
+    const out = []; const skipped = {}; let total = 0;
+    const walk = async (blob, label, depth) => {
+      let zip;
+      try { zip = await window.JSZip.loadAsync(blob); } catch (e) { toast(`"${label}" bukan fail ZIP yang sah atau rosak.`, 'error', 7000); return; }
+      for (const entry of Object.values(zip.files)) {
+        const path = entry.name.replace(/\\/g, '/');
+        const base = path.split('/').pop();
+        if (entry.dir || !base || /^__MACOSX\//.test(path) || /^\._|^\.DS_Store$|^Thumbs\.db$|^~\$/i.test(base)) continue;
+        const ext = (base.match(/\.[^.]+$/) || [''])[0].toLowerCase();
+        if (ext === '.zip' && depth < 2) { await walk(await entry.async('blob'), `${label} › ${path}`, depth + 1); continue; }
+        if (!ok.has(ext)) { skipped[ext || '(tiada)'] = (skipped[ext || '(tiada)'] || 0) + 1; continue; }
+        const data = await entry.async('blob');
+        total += data.size;
+        if (total > MAX) { toast(`Kandungan ZIP melebihi 300 MB — baki fail tidak dibuka. Pecahkan zip kepada beberapa bahagian.`, 'error', 8000); return; }
+        out.push(new File([data], `${label} › ${path.split('/').join(' › ')}`, { lastModified: entry.date ? entry.date.getTime() : Date.now() }));
+      }
+    };
+    const plain = [];
+    for (const f of files) { if (/\.zip$/i.test(f.name)) await walk(f, f.name.replace(/\.zip$/i, ''), 0); else plain.push(f); }
+    const sk = Object.entries(skipped).map(([e, n]) => `${e} ×${n}`).join(', ');
+    toast(`ZIP dibuka: ${out.length} fail${sk ? `; dilangkau (bukan data RPH): ${sk}` : ''}.`, out.length ? 'success' : 'error', 7000);
+    return [...plain, ...out];
+  }
   async function addFiles(files, hint = {}) {
     if (!files || !files.length) return;
     if (!RPH.readers || typeof RPH.readers.read !== 'function') { toast('Pembaca fail (js/import/readers.js) tidak dimuatkan.', 'error', 6000); return; }
+    files = await expandZips([...files]);
+    if (!files.length) return;
     const added = files.map(f => ({ id: U.uid('q'), file: f, status: 'membaca', progress: null, doc: null, cls: null, kind: hint.kind || null, subjectId: hint.subjectId || null, subjectYear: hint.subjectYear || null, error: null }));
     state.queue.push(...added);
     if (added.length === 1 && hint.kind) { await readItem(added[0]); openItem(added[0]); return; }
@@ -1018,7 +1049,7 @@
     },
     _state: state,
     // Untuk ujian automatik (tests/import.test.mjs) sahaja.
-    _test: { addFiles, startSession, runImport, rebuild, save, draw, ctxFor, openTeacherPack },
+    _test: { addFiles, expandZips, startSession, runImport, rebuild, save, draw, ctxFor, openTeacherPack },
     autoImport,
   };
 })(window.RPH = window.RPH || {});

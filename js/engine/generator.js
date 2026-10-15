@@ -174,7 +174,7 @@
     if (!same.length) return null;
     const last = same[same.length - 1];
     return {
-      fromKind: row.kind, kind: last.kind, unit: row.unit || null, theme: row.theme || null,
+      fromKind: row.kind, kind: last.kind, unit: row.unit || null, theme: row.theme || null, afterEnd: row.afterEnd || null,
       weeks: uniq(same.map(p => p.rptWeek)), examInTakwim: takwimExamWeek(schoolWeek), postExamInTakwim: takwimPostExamWeek(schoolWeek),
       sk: uniq(same.flatMap(p => p.skCandidates || [])), sp: uniq(same.flatMap(p => p.spCandidates || [])),
       content: uniq(same.flatMap(p => p.content || [])),
@@ -196,7 +196,13 @@
     if (subjectId === 'BA') {
       const rpt = S().rpt('BA', year);
       if (!rpt || !rpt.rows) return { ...base, source: null, missing: 'rpt' };
-      const row = rptWeek == null ? null : rpt.rows.find(r => r.rptWeek === rptWeek);
+      let row = rptWeek == null ? null : rpt.rows.find(r => r.rptWeek === rptWeek);
+      const lastWeek = Math.max(0, ...rpt.rows.map(r => +r.rptWeek || 0));
+      if (!row && rptWeek != null && rptWeek > lastWeek) {
+        // Takwim lebih panjang daripada RPT (cth. RPT 41 minggu, takwim 42) → ulang kaji unit terakhir RPT.
+        const last = rpt.rows.filter(r => r.rptWeek === lastWeek)[0];
+        if (last && (last.unit || last.theme)) row = { rptWeek, unit: last.unit || null, theme: last.theme || null, kind: 'ulangkaji', content: [], skCandidates: [], spCandidates: [], afterEnd: lastWeek };
+      }
       if (!row) return { ...base, source: 'RPT', rptId: rpt.id, missing: 'row' };
       const occurrence = rpt.rows.filter(r => r.rptWeek != null && r.rptWeek < row.rptWeek && r.theme === row.theme && r.kind === row.kind).length;
       const review = baReviewOf(rpt, row, peers.week);
@@ -493,10 +499,12 @@
       const wk = R.weeks.length > 1 ? `${R.weeks[0]}–${R.weeks[R.weeks.length - 1]}` : `${R.weeks[0]}`;
       const src = `SK/SP daripada RPT minggu ${wk} (diterbitkan sistem)`;
       const isProg = /program/.test(R.fromKind);
-      ctx.notes.push(R.examInTakwim ? `Minggu peperiksaan (takwim): RPH ulang kaji ${where} — ${src}. Tandakan status "Peperiksaan" jika PdP tidak berjalan.`
+      ctx.notes.push(R.afterEnd ? `RPT berakhir pada minggu ${R.afterEnd}; minggu RPT ${ctx.rptWeek} diisi ulang kaji ${where} — ${src}. Semak jika perlu.`
+        : R.examInTakwim ? `Minggu peperiksaan (takwim): RPH ulang kaji ${where} — ${src}. Tandakan status "Peperiksaan" jika PdP tidak berjalan.`
         : isProg && R.postExamInTakwim ? `Minggu program pasca peperiksaan (takwim): RPH ulang kaji ${where} — ${src}. Tandakan status "Program Sekolah" jika PdP tidak berjalan.`
           : `RPT menanda minggu RPT ${ctx.rptWeek} sebagai "${R.fromKind}", tetapi takwim tahun ini tiada ${isProg ? 'program pasca peperiksaan' : 'peperiksaan'} pada minggu ini (RPT sesi lain?). RPH diisi ulang kaji ${where} — ${src}. Semak jika perlu.`);
     }
+    else if (useRpt && L.kind === 'program') ctx.notes.push(`Minggu RPT ${ctx.rptWeek} ialah program sekolah (tiada PdP) — RPH ditanda status "Program Sekolah".`);
     else if (useRpt && L.kind && !AR_KIND[L.kind]) ctx.warnings.push(`${NO_DATA}: minggu RPT ${ctx.rptWeek} ialah "${L.kind}" (tiada SK/SP).`);
 
     // Kandungan RPT
@@ -669,6 +677,13 @@
     devTexts.push(pakText);
     while (devTexts.length < preset[1].length) devTexts.push(fa(pick.one(`extra:${devTexts.length}`, A.verbSteps[focusVerb] || A.verbSteps.read)));
     const development = devTexts.slice(0, preset[1].length).map((t, i) => ({ text: t, minutes: preset[1][i], ...(t === pakText ? { pak21: pakId } : {}) }));
+    // Objektif penulisan mesti ada langkah penulisan (§70): jika tiada, pecahkan langkah terpanjang (jumlah minit kekal).
+    const writeVerb = verbs.find(v => (A.verbs[v] || {}).mode === 'written' && A.verbSteps[v]);
+    if (writeVerb && RPH.check && RPH.check.hasWritingStep && !RPH.check.hasWritingStep(development.map(x => x.text).join(' '))) {
+      let k = 0; development.forEach((x, i) => { if (x.minutes > development[k].minutes) k = i; });
+      const take = Math.min(5, Math.floor(development[k].minutes / 2));
+      if (take >= 2) { development[k].minutes -= take; development.push({ text: fa(pick.one(`write:${writeVerb}`, A.verbSteps[writeVerb])), minutes: take }); stepVerbs.push(writeVerb); }
+    }
     const closure = [fa(pick.one('cl1', A.closure[focusMode] || A.closure.oral), { unitDef: focusMode === 'written' ? vars.unitDef : vars.mainDef }), fa(pick.one('cl2', A.closure.umum))]
       .slice(0, preset[2].length).map((t, i) => ({ text: t, minutes: preset[2][i] }));
     c.phases = { induction, development, closure };
@@ -704,6 +719,13 @@
     }
     // KBAT hanya jika ada langkah aktiviti yang benar-benar menuntut aras itu (§35).
     c.kbat = maxKbat([...stepVerbs.filter(Boolean).map(v => (A.verbs[v] || {}).kbat), pakDef.kbat]);
+    // KBAT mesti disokong oleh aktiviti sebenar (§35): turunkan aras sehingga sepadan (cth. dialog berpasangan = mengaplikasi).
+    if (c.kbat && RPH.check && RPH.check.kbatFits) {
+      const LADDER = ['mencipta', 'menilai', 'menganalisis', 'mengaplikasi'];
+      const txt = `${all} ${c.objectives.join(' ')}`;
+      const i = LADDER.slice(Math.max(0, LADDER.indexOf(c.kbat))).find(k => RPH.check.kbatFits(k, txt));
+      if (i) c.kbat = i;
+    }
     c.emk = 'bahasa';
     const groupWork = LAT ? RX.group.test(all) : /أزواج|مجموعة|مجموعات|زميل|تلميذين/.test(all);
     c.values = groupWork ? 'kerjasama' : 'menghargai-tradisi';
@@ -851,7 +873,7 @@
     if (!tasmik && !CU().get(sid, year)) ctx.warnings.push(`${NO_DATA}: DSKP Pendidikan Islam Tahun ${year || '?'} tiada.`);
     if (L.missing === 'rpt' && !tasmik) ctx.warnings.push(`${NO_DATA}: RPT Pendidikan Islam Tahun ${year || '?'} tiada.`);
     else if (L.missing === 'row') ctx.warnings.push(`${NO_DATA}: tiada pelajaran RPT bagi minggu RPT ${ctx.rptWeek ?? '?'}.`);
-    if (L.kind === 'program') ctx.warnings.push(`${NO_DATA}: minggu RPT ${ctx.rptWeek} ialah program sekolah (tiada SK/SP).`);
+    if (L.kind === 'program') ctx.notes.push(`Minggu RPT ${ctx.rptWeek} ialah program sekolah (tiada PdP) — RPH ditanda status "Program Sekolah".`);
 
     // SK / SP
     if (tasmik) {
@@ -869,6 +891,9 @@
       c.sp = spAll.filter(x => CU().sp(sid, year, x) && c.sk.some(s => x.startsWith(`${s}.`)));
       const dropped = [...skAll.filter(x => !c.sk.includes(x)), ...spAll.filter(x => !c.sp.includes(x))];
       if (dropped.length) ctx.warnings.push(`Kod RPT tidak sah/di luar SK dibuang: ${dropped.join(', ')} — perlu semakan guru.`);
+      // RPT menyenaraikan SK tanpa sebarang SP di bawahnya → SK itu tidak dimasukkan (tiada SP dipilih sendiri; tiada reka).
+      const bare = c.sp.length ? c.sk.filter(s => !c.sp.some(x => x.startsWith(`${s}.`))) : [];
+      if (bare.length) { c.sk = c.sk.filter(s => !bare.includes(s)); ctx.notes.push(`SK ${bare.join(', ')} dalam RPT tiada SP — tidak dimasukkan dalam RPH ini. Tambah SP sendiri jika SK itu diajar.`); }
       if (!c.sk.length || !c.sp.length) ctx.warnings.push(`${NO_DATA}: SK/SP tidak dapat ditentukan daripada RPT/DSKP.`);
     }
 
@@ -1118,7 +1143,7 @@
       if (!bidang && L.kind === 'program') bidang = 'umum';
       if (!bidang) bidang = sid === 'PIQ' ? 'khatam' : 'tilawah';
       c.subjectDomain = bidang === 'umum' ? '' : bidang;
-      if (L.kind === 'program') { c.suggestedStatus = 'program'; ctx.warnings.push(`${NO_DATA}: minggu RPT ${ctx.rptWeek} ialah program sekolah (tiada SK/SP).`); }
+      if (L.kind === 'program') { c.suggestedStatus = 'program'; ctx.notes.push(`Minggu RPT ${ctx.rptWeek} ialah program sekolah (tiada PdP) — RPH ditanda status "Program Sekolah".`); }
     }
     const pack = bidang ? (PH().jawi.bidang[bidang] || PH().jawi.bidang.tilawah) : null;
     const cat = tasmik ? 'quran' : pack ? pack.cat : 'generic';
@@ -1142,6 +1167,9 @@
       c.sp = spAll.filter(x => CU().sp(sid, year, x) && c.sk.some(s => x.startsWith(`${s}.`)));
       const dropped = [...skAll.filter(x => !c.sk.includes(x)), ...spAll.filter(x => !c.sp.includes(x))];
       if (dropped.length) ctx.warnings.push(`Kod RPT tidak sah/di luar SK dibuang: ${dropped.join(', ')} — perlu semakan guru.`);
+      // RPT menyenaraikan SK tanpa sebarang SP di bawahnya → SK itu tidak dimasukkan (tiada SP dipilih sendiri; tiada reka).
+      const bare = c.sp.length ? c.sk.filter(s => !c.sp.some(x => x.startsWith(`${s}.`))) : [];
+      if (bare.length) { c.sk = c.sk.filter(s => !bare.includes(s)); ctx.notes.push(`SK ${bare.join(', ')} dalam RPT tiada SP — tidak dimasukkan dalam RPH ini. Tambah SP sendiri jika SK itu diajar.`); }
     } else {
       c.sk = (L.sk || []).filter(validSk); c.sp = (L.sp || []).filter(validSp);
     }
@@ -1538,7 +1566,7 @@
         classId: ctx.slot.classId, className: ctx.slot.className || (ctx.cls && ctx.cls.name) || ctx.slot.classId, year: ctx.year, subjectId: ctx.subjectId,
         templateId: ctx.template.id, variant,
         timetableVersionId: ctx.slot.versionId || null, slotId: ctx.slot.id || null,
-        status: 'draft',
+        status: ctx.lesson && ctx.lesson.kind === 'program' && c.suggestedStatus === 'program' ? 'program' : 'draft',
         values: toValues(ctx, c),
         provenance: provenance(ctx, c),
         warnings: uniq(ctx.warnings),

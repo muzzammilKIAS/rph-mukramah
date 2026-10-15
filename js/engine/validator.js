@@ -21,6 +21,8 @@
   /** Kata kerja/isyarat lisan vs bertulis dalam objektif. */
   const ORAL = /قراءة|نطق|محاكاة|ترديد|تسميع|تحديد|تمييز|تهجئة|الاستماع|الإشارة|استخدام|تمثيل|ممباچ|مڽبوت|مڠحفظ|ممڤردڠركن|مڽاتاكن|منرڠكن|منجلسكن|مڠنل ڤستي|تلقي|مڽنارايكن|membaca|menyebut|menyatakan|menerangkan|menghafaz|mengenal pasti|ذكر|شرح|تعداد|mengulang|mengeja|meniru|menunjukkan|membezakan|mengelaskan|menyusun|menggunakan|melakonkan|memperdengarkan|مڠولڠ|مڠيجا|منيرو|منونجوقكن|ممبيذاكن|مڠلسكن|مڽوسون|مڠݢوناكن|ملاكونكن|\b(read|reads|say|pronounce|repeat|recite|memorise|memorize|state|name|identify|explain|answer|list|describe|tell|spell|point to|imitate|use)\b/i;
   const WRITTEN = /كتابة|نسخ|منوليس|ممبينا|مڽالين|مڽوريه|menulis|membina ayat|menyalin|menyurih|\b(write|writes|writing|copy|copies)\b/i;
+  /** Langkah aktiviti yang benar-benar melibatkan penulisan (semua bahasa templat). */
+  const WRITE_ACT = /كتابة|يكتب|تكتب|نسخ|ينسخ|منوليس|ممبينا|مڽالين|مڽوريه|توليسن|menulis|menyalin|menyurih|tulisan|ورقة العمل|لمبرن كرجا|يكتبون|\bwrit|\bcop(?:y|ies)\b|worksheet/i;
   const ORAL_ASSESS = ['lisan', 'pemerhatian', 'tasmik', 'pembentangan', 'kuiz'];
   const WRITTEN_ASSESS = ['penulisan', 'lembaran-kerja', 'aktiviti-bertulis', 'hasil-kerja', 'projek'];
   /** Isyarat aktiviti yang menuntut aras KBAT (§35). */
@@ -73,6 +75,10 @@
     jawiIssues,
     activities: rph => activities(rph, template(rph)),
     isMeasurable: measurable,
+    /** Teks aktiviti mengandungi langkah penulisan? */
+    hasWritingStep: text => WRITE_ACT.test(String(text || '')),
+    /** Aras KBAT disokong oleh teks aktiviti/objektif (§35)? */
+    kbatFits: (id, text) => !KBAT_CUES[id] || KBAT_CUES[id].test(String(text || '')),
 
     beforeExport(rph) {
       const errors = [], warnings = [];
@@ -87,13 +93,17 @@
       if (!rph.classId && !rph.className) warnings.push('Kelas kosong.');
       if (!rph.subjectId) warnings.push('Subjek kosong.');
 
+      // Cuti / program sekolah / peperiksaan: tiada PdP → medan pengajaran kosong bukan kesilapan.
+      const nonPdp = ['cuti', 'program', 'peperiksaan'].includes(rph.status);
+      const warn = warnings; const pdpWarn = nonPdp ? [] : warnings;
+
       // --- SK / SP ---
       const subj = rph.subjectId; const year = rph.year;
       const hasCurr = !!RPH.curr.get(subj, year);
       const skF = fieldsOfType(t, 'sk-select')[0]; const spF = fieldsOfType(t, 'sp-select')[0];
       const skCodes = skF ? (v[skF.key] || []) : []; const spCodes = spF ? (v[spF.key] || []) : [];
-      if (skF && !skCodes.length) warnings.push('Standard Kandungan (SK) kosong.');
-      if (spF && !spCodes.length) warnings.push('Standard Pembelajaran (SP) kosong.');
+      if (skF && !skCodes.length) pdpWarn.push('Standard Kandungan (SK) kosong.');
+      if (spF && !spCodes.length) pdpWarn.push('Standard Pembelajaran (SP) kosong.');
       const skReal = skCodes.filter(x => !isTxt(x)); const spReal = spCodes.filter(x => !isTxt(x));
       if ((skReal.length || spReal.length) && !hasCurr) warnings.push(`Kurikulum ${subj} Tahun ${year} tiada — kod SK/SP tidak dapat disahkan.`);
       if (hasCurr) {
@@ -104,24 +114,24 @@
       for (const c of skReal) if (spReal.length && !spReal.some(s => s.startsWith(`${c}.`))) warnings.push(`SK ${c} tiada SP dipilih.`);
       // Templat teks bebas (Tasmik)
       for (const f of (t ? t.fields : []).filter(f => f.type === 'text' && (f.key === 'contentStandards' || f.key === 'learningStandards'))) {
-        if (!String(v[f.key] || '').trim()) warnings.push(`${f.key === 'contentStandards' ? 'Standard Kandungan' : 'Standard Pembelajaran'} kosong.`);
+        if (!String(v[f.key] || '').trim()) pdpWarn.push(`${f.key === 'contentStandards' ? 'Standard Kandungan' : 'Standard Pembelajaran'} kosong.`);
       }
 
       // --- Objektif & kriteria ---
       const objs = (v.objectives || []).filter(s => String(s || '').trim());
       const crit = (v.successCriteria || []).filter(s => String(s || '').trim());
       if ('objectives' in v || (t && t.fields.some(f => f.key === 'objectives'))) {
-        if (!objs.length) warnings.push('Objektif kosong (tiada objektif pembelajaran).');
+        if (!objs.length) pdpWarn.push('Objektif kosong (tiada objektif pembelajaran).');
         objs.forEach((o, i) => { if (!measurable(o)) warnings.push(`Objektif ${i + 1} tiada ukuran yang boleh diukur (cth. bilangan / "sekurang-kurangnya").`); });
       }
       if (t && t.fields.some(f => f.key === 'successCriteria')) {
-        if (!crit.length) warnings.push('Kriteria kejayaan kosong.');
+        if (!crit.length) pdpWarn.push('Kriteria kejayaan kosong.');
         crit.forEach((o, i) => { if (!measurable(o)) warnings.push(`Kriteria kejayaan ${i + 1} tiada ukuran yang boleh diukur.`); });
       }
 
       // --- Aktiviti & masa (§31) ---
       const act = activities(rph, t);
-      if (!act.items.length) warnings.push('Aktiviti kosong.');
+      if (!act.items.length) pdpWarn.push('Aktiviti kosong.');
       else {
         for (const [p, arr] of Object.entries(act.phases)) if (!arr.length) warnings.push(`Fasa aktiviti "${PHASE_MS[p] || p}" kosong.`);
         const timed = act.items.filter(x => !x.group);
@@ -142,7 +152,7 @@
       // --- Pentaksiran (§37, §70) ---
       const assess = [].concat(v.assessment || [], v.assessmentMethod || [], v.assessmentInstrument || []).filter(Boolean);
       const hasAssessField = t && t.fields.some(f => ['assessment', 'assessmentMethod', 'assessmentInstrument'].includes(f.key));
-      if (hasAssessField && !assess.length) warnings.push('Pentaksiran kosong.');
+      if (hasAssessField && !assess.length) pdpWarn.push('Pentaksiran kosong.');
       if (assess.length && objs.length) {
         const objText = objs.join(' ');
         const ids = assess.map(x => String(x).replace(/^txt:/, '').toLowerCase());
@@ -156,7 +166,7 @@
         const spText = spReal.map(c => (RPH.curr.sp(subj, year, c) || {}).text || '').join(' ');
         if (WRITTEN.test(spText) && !WRITTEN.test(objs.join(' '))) warnings.push('SP melibatkan penulisan tetapi tiada objektif penulisan.');
       }
-      if (objs.length && act.items.length && WRITTEN.test(objs.join(' ')) && !/كتابة|يكتب|تكتب|نسخ|ينسخ|منوليس|ممبينا|مڽالين|مڽوريه|توليسن|menulis|menyalin|menyurih|tulisan|ورقة العمل|لمبرن كرجا|يكتبون|\bwrit|\bcop(?:y|ies)\b|worksheet/i.test(actText)) warnings.push('Objektif penulisan tiada aktiviti penulisan yang sepadan.');
+      if (objs.length && act.items.length && WRITTEN.test(objs.join(' ')) && !WRITE_ACT.test(actText)) warnings.push('Objektif penulisan tiada aktiviti penulisan yang sepadan.');
 
       // --- KBAT (§35) ---
       if (v.kbat) {
@@ -183,7 +193,7 @@
       }
 
       // --- Amaran penjana (cth. "Data tidak tersedia — perlu semakan guru") ---
-      for (const w of rph.warnings || []) warnings.push(w);
+      for (const w of rph.warnings || []) (/^Data tidak tersedia|^Objektif tidak dapat dijana|^Masa slot tidak diketahui/.test(w) ? pdpWarn : warn).push(w);
       return { errors: uniq(errors), warnings: uniq(warnings), ok: errors.length === 0 };
     },
   };

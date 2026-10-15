@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart RPH Generator</title>
+  <meta name="description" content="Penjana Rancangan Pengajaran Harian modular, pelbagai subjek — SK Taman Tawau">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f5c4d'/%3E%3Cpath d='M9 8h11a3 3 0 0 1 3 3v13H12a3 3 0 0 1-3-3z' fill='none' stroke='%23e8c77a' stroke-width='2'/%3E%3Cpath d='M13 13h6M13 17h6' stroke='%23e8c77a' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/views-admin.css">
+  <link rel="stylesheet" href="css/views-rph.css">
+  <link rel="stylesheet" href="css/views-import.css">
+  <link rel="stylesheet" href="css/views-rptgen.css">
+  <link rel="stylesheet" href="css/rptdoc.css">
+  <link rel="stylesheet" href="css/print.css">
+</head>
+<body>
+  <a class="skip" href="#main">Langkau ke kandungan</a>
+  <aside id="sidebar" aria-label="Navigasi utama">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">ر</div>
+      <div><div class="brand-name">Smart RPH</div><div class="brand-sub">Generator</div></div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="sidebar-foot">© Muzzammil Najib <span>2026</span></div>
+  </aside>
+  <div id="shell">
+    <header id="topbar">
+      <button id="nav-toggle" class="btn-icon" aria-label="Buka menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <div id="topbar-info"></div>
+    </header>
+    <main id="main" tabindex="-1"></main>
+  </div>
+  <div id="print-root" aria-hidden="true"></div>
+
+  <!-- Pustaka & aset luar talian -->
+  <script src="assets/vendor/docx.iife.js"></script>
+  <script src="assets/vendor/jszip.min.js"></script>
+  <script src="assets/vendor/xlsx.full.min.js"></script>
+  <script src="assets/vendor/pdf.min.js"></script>
+  <script src="assets/vendor/pdf.worker.min.js"></script>
+  <script src="assets/fonts/naskh-ttf.js"></script>
+  <!-- Data seed -->
+  <script src="js/data/seed-public.js"></script>
+  <script src="data/private/seed-private.js" onerror="window.RPH_SEED_PRIVATE = null"></script>
+  <!-- Teras -->
+  <script src="js/core/ns.js"></script>
+  <script src="js/core/jawi.js"></script>
+  <script src="js/core/storage.js"></script>
+  <script src="js/core/store.js"></script>
+  <script src="js/core/calendar.js"></script>
+  <script src="js/core/curriculum.js"></script>
+  <script src="js/core/i18n.js"></script>
+  <script src="js/core/ui.js"></script>
+  <script src="js/core/router.js"></script>
+
+  <script src="js/import/readers.js"></script>
+  <script src="js/import/ai.js"></script>
+  <script src="js/import/translate.js"></script>
+  <script src="js/import/importers.js"></script>
+  <!-- Enjin -->
+  <script src="js/engine/banks.js"></script>
+  <script src="js/engine/phrasebank.js"></script>
+  <script src="js/engine/generator.js"></script>
+  <script src="js/engine/rptgen.js"></script>
+  <script src="js/engine/validator.js"></script>
+  <!-- Eksport -->
+  <script src="js/export/render.js"></script>
+  <script src="js/export/print.js"></script>
+  <script src="js/export/docx.js"></script>
+  <script src="js/export/rptdoc.js"></script>
+  <!-- Paparan -->
+  <script src="js/views/dashboard.js"></script>
+  <script src="js/views/generate.js"></script>
+  <script src="js/views/weekly.js"></script>
+  <script src="js/views/records.js"></script>
+  <script src="js/views/editor.js"></script>
+  <script src="js/views/progress.js"></script>
+  <script src="js/views/subjects.js"></script>
+  <script src="js/views/dskp.js"></script>
+  <script src="js/views/rpt.js"></script>
+  <script src="js/views/rptgen.js"></script>
+  <script src="js/views/timetable.js"></script>
+  <script src="js/views/calendar.js"></script>
+  <script src="js/views/templates.js"></script>
+  <script src="js/views/banks.js"></script>
+  <script src="js/views/settings.js"></script>
+  <script src="js/views/import.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

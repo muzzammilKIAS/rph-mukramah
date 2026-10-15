@@ -1,0 +1,100 @@
+/* Dokumen RPT (Rancangan Pengajaran Tahunan) — pratonton halaman A4 + cetak. Dijana oleh js/export/rptdoc.js.
+   Kelas berawalan .rptd-. Selaras dengan css/print.css: @page margin 12 mm, kotak margin kosong (tiada pengepala/pengaki pelayar),
+   potret/lanskap melalui @page per pekerjaan cetak yang dipasang oleh RPH.rptdoc.print(). */
+
+.rptd-doc {
+  --rptd-line: #444;
+  --rptd-lat: Calibri, Carlito, "Segoe UI", "Helvetica Neue", Arial, "Liberation Sans", sans-serif;
+  --rptd-trad: "Traditional Arabic", "Noto Naskh Arabic", serif;
+  --rptd-naskh: "Noto Naskh Arabic", "Traditional Arabic", serif;
+  color: #000;
+  font-family: var(--rptd-lat);
+  font-size: 9pt;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.rptd-doc.mode-preview { padding: 16px 0; overflow-x: auto; }
+.rptd-error { color: #7f1d1d; padding: 12mm; }
+
+/* ---------- Halaman A4 ---------- */
+.rptd-page { box-sizing: border-box; background: #fff; display: flex; flex-direction: column; position: relative; }
+.rptd-doc.mode-preview .rptd-page {
+  padding: 12mm; margin: 0 auto 18px;
+  /* tiada border: lebar kandungan mesti tepat = lebar pengukur (pagination) supaya baris tidak berbalut berbeza */
+  box-shadow: 0 0 0 1px #e3e3e3, 0 1px 3px rgba(0, 0, 0, .12), 0 8px 28px rgba(0, 0, 0, .10);
+}
+.rptd-doc.mode-preview .rptd-page.orient-portrait { width: 210mm; height: 297mm; }
+.rptd-doc.mode-preview .rptd-page.orient-landscape { width: 297mm; height: 210mm; }
+.rptd-body { flex: 1 1 auto; min-height: 0; }
+.rptd-draft { flex: none; height: 6mm; line-height: 6mm; text-align: center; font: 700 10pt/6mm var(--rptd-lat); color: #b00020; letter-spacing: .2px; }
+.rptd-draft[lang="ar"], .rptd-draft[lang="ms-Arab"] { font-family: var(--rptd-naskh), var(--rptd-lat); font-size: 11pt; }
+.rptd-foot { flex: none; height: 7mm; line-height: 7mm; text-align: center; font-size: 8pt; color: #555; }
+.rptd-foot[lang="ar"], .rptd-foot[lang="ms-Arab"] { font-family: var(--rptd-naskh), var(--rptd-lat); font-size: 9pt; }
+
+/* Pengukur (pagination) — di luar skrin */
+.rptd-probe { position: absolute; left: -20000px; top: 0; visibility: hidden; box-sizing: border-box; }
+
+/* ---------- Tajuk & tandatangan ---------- */
+.rptd-title { text-align: center; padding: 0 0 2.5mm; }
+.rptd-title .rptd-p { text-align: center; }
+.rptd-p.k-doc { background: #FFD243; padding: 1mm 3mm; margin: 1.2mm 0; }
+.rptd-p.k-school { margin-bottom: .5mm; }
+.rptd-p.k-sub, .rptd-p.k-addr { color: #444; }
+.rptd-sign { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8mm; padding-top: 5mm; break-inside: avoid; page-break-inside: avoid; }
+.rptd-sign-item .rptd-p.k-space { min-height: 6mm; }
+/* Nota kaki terjemahan SK/SP (bukan teks rasmi DSKP) */
+.rptd-tnote { padding-top: 1.5mm; color: #444; }
+.rptd-tnote .rptd-p { --s: .95; font-style: italic; }
+.rptd-tnote .rptd-p.p-rtl { font-style: normal; }
+.rptd-p.rptd-rule { border-top: .75pt dotted #000; margin: 0 3mm; padding-top: 1mm; text-align: center; min-height: 1.4em; }
+.rptd-sign-item .rptd-p { text-align: start; }
+.rptd-sign-item .rptd-p.rptd-rule, .rptd-sign-item .rptd-p.al-center { text-align: center; }
+
+/* ---------- Jadual ---------- */
+.rptd-table { width: 100%; border-collapse: collapse; table-layout: fixed; line-height: 1.35; background: #fff; }
+.rptd-table th, .rptd-table td {
+  border: .75pt solid var(--rptd-line); padding: 1.6pt 4pt; vertical-align: top;
+  font-weight: normal; overflow-wrap: anywhere; word-break: normal;
+}
+.rptd-table th.c-head { font-weight: 700; vertical-align: middle; }
+.rptd-table .va-center { vertical-align: middle; }
+.rptd-row { break-inside: avoid; page-break-inside: avoid; }
+.rptd-table thead { display: table-header-group; }
+.rptd-table .c-term, .rptd-table .c-status { vertical-align: middle; }
+.rptd-table .c-term { padding: 2.2pt 4pt; letter-spacing: .3px; }
+
+/* Perenggan: saiz asas ikut skrip (Latin 9pt; Naskh 10.5pt; Traditional Arabic 12pt) × skala jenis tajuk */
+.rptd-p { --b: 9pt; font-size: calc(var(--b) * var(--s, 1)); margin: 0; min-height: 1.15em; unicode-bidi: isolate; }
+.rptd-p + .rptd-p { margin-top: 1pt; }
+.rptd-p.p-rtl { --b: 10.5pt; font-family: var(--rptd-naskh), var(--rptd-lat); line-height: 1.7; text-align: right; }
+.rptd-p.p-rtl.f-trad { --b: 12pt; font-family: var(--rptd-trad), var(--rptd-lat); line-height: 1.5; }
+.rptd-p.p-ltr { font-family: var(--rptd-lat); text-align: left; }
+.rptd-p .lat { font-family: var(--rptd-lat); font-size: .86em; }
+.rptd-p.p-ltr .ar { font-family: var(--rptd-naskh), serif; font-size: 1.15em; line-height: 1; }
+.rptd-p.p-ltr .ar.f-trad { font-family: var(--rptd-trad); }
+.rptd-doc bdi.lat, .rptd-doc bdi.ar { unicode-bidi: isolate; }
+.rptd-p.al-center { text-align: center; }
+.rptd-p.al-right { text-align: right; }
+.rptd-p.k-school { --s: 1.25; } .rptd-p.k-doc { --s: 1.6; } .rptd-p.k-subject { --s: 1.3; } .rptd-p.k-sub { --s: .95; } .rptd-p.k-addr { --s: .85; }
+.rptd-sm { font-size: .83em; }
+.rptd-muted { color: #444; }
+
+/* ---------- Cetak ---------- */
+/* Saiz kertas (potret/lanskap) ditetapkan PER PEKERJAAN CETAK: RPH.rptdoc.print() memasang <style id="rptd-page-style"> dengan
+   RPH.rptdoc.pageStyle(model) (A4 + margin 12 mm + enam kotak margin kosong). @page bernama + `page:` DITINGGALKAN — Chrome menyelitkan
+   halaman kosong di hadapan apabila nama halaman berubah (diuji). */
+@media print {
+  .rptd-doc, .rptd-doc.mode-preview { padding: 0 !important; overflow: visible !important; }
+  .rptd-page, .rptd-doc.mode-preview .rptd-page {
+    width: auto !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; border: none !important;
+    break-after: page; page-break-after: always;
+  }
+  /* tinggi = kawasan cetak (A4 − 2×12 mm) tolak 0.5 mm supaya pembundaran tidak menghasilkan halaman kosong */
+  .rptd-doc.orient-portrait .rptd-page, .rptd-doc.mode-preview.orient-portrait .rptd-page { height: 272.5mm !important; }
+  .rptd-doc.orient-landscape .rptd-page, .rptd-doc.mode-preview.orient-landscape .rptd-page { height: 185.5mm !important; }
+  .rptd-page:last-child { break-after: auto; page-break-after: auto; }
+  .rptd-row, .rptd-sign { break-inside: avoid; page-break-inside: avoid; }
+  .rptd-table thead { display: table-header-group; }
+  .rptd-p.p-rtl { font-family: var(--rptd-naskh), Arial, sans-serif; }
+  .rptd-p.p-rtl.f-trad { font-family: var(--rptd-trad), Arial, sans-serif; }
+}

@@ -1,0 +1,117 @@
+/* Paparan RPH A4 (pratonton) + gaya cetak (@media print). Dijana oleh js/export/render.js. */
+
+/* ---------- Dokumen RPH (skrin & cetak) ---------- */
+.rph-doc {
+  --rph-line: #000;
+  --rph-lat: Arial, "Helvetica Neue", Helvetica, "Liberation Sans", sans-serif;
+  --rph-sym: "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans", "Noto Sans Symbols 2", sans-serif;
+  color: #000;
+  font-family: var(--rph-lat);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.rph-doc.mode-preview { padding: 16px 0; overflow-x: auto; }
+.rph-page { box-sizing: border-box; background: #fff; }
+.rph-doc.mode-preview .rph-page.a4 {
+  width: 210mm; min-height: 297mm; padding: 12mm; margin: 0 auto 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 8px 28px rgba(0, 0, 0, .10);
+  border: 1px solid #e3e3e3;
+}
+.rph-doc.mode-print .rph-page { width: 100%; padding: 0; }
+
+/* Tajuk dokumen mingguan (seperti dokumen guru) */
+.rph-week-title { text-align: center !important; font: 700 11pt/1.4 var(--rph-lat); margin: 0 0 4mm; letter-spacing: .2px; }
+.rph-day-title { font: 700 10.5pt/1.4 var(--rph-lat); margin: 0 0 3mm 4mm; text-align: left !important; }
+
+/* Kepala cetak pilihan (logo, sekolah, guru) */
+.rph-head { text-align: left !important; display: flex; align-items: center; gap: 3mm; margin: 0 0 3mm; padding-bottom: 2mm; border-bottom: 0.75pt solid #999; }
+.rph-logo { height: 13mm; width: auto; object-fit: contain; }
+.rph-head-text { line-height: 1.3; }
+.rph-school { font: 700 10pt/1.3 var(--rph-lat); }
+.rph-teacher { font: 8.5pt/1.3 var(--rph-lat); color: #333; }
+
+/* Jadual RPH */
+.rph-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9.5pt; line-height: 1.35; background: #fff; }
+.rph-table th, .rph-table td {
+  border: 0.75pt solid var(--rph-line); padding: 1.6pt 4pt; vertical-align: top;
+  font-weight: normal; text-align: start; overflow-wrap: anywhere; word-break: normal;
+}
+.rph-table th.c-label, .rph-table th.c-head, .rph-table th.c-title { font-weight: 700; }
+.rph-table .c-title { padding: 4pt; font-size: 12pt; }
+.rph-table .c-num { text-align: center; }
+.rph-table .va-center { vertical-align: middle; }
+.rph-table .al-center, .rph-table .rph-p.al-center { text-align: center; }
+.rph-table .rph-p.al-right { text-align: right; }
+.rph-table .rph-p.p-rtl:not(.al-center) { text-align: right; }
+.rph-table[dir="ltr"] .rph-p.p-ltr:not(.al-center):not(.al-right) { text-align: left; }
+.rph-p { margin: 0; min-height: 1.2em; }
+.rph-p + .rph-p { margin-top: 1pt; }
+
+/* Teks Arab / Jawi: Noto Naskh Arabic (font-face hanya meliputi julat Arab; Latin jatuh ke Arial). */
+.rph-p.p-rtl { font-family: var(--font-ar, "Noto Naskh Arabic"), var(--rph-lat); font-size: 11.5pt; line-height: 1.7; unicode-bidi: isolate; }
+.rph-p.p-ltr { font-family: var(--rph-lat); unicode-bidi: isolate; }
+.rph-p.p-rtl .lat { font-family: var(--rph-lat); font-size: .84em; }
+.rph-p.p-ltr .ar { font-family: var(--font-ar, "Noto Naskh Arabic"), serif; font-size: 1.2em; line-height: 1; }
+/* Bahasa Arab → Traditional Arabic (seperti RPH asal guru); jika tiada pada komputer, jatuh ke Noto Naskh Arabic.
+   Jawi kekal Noto Naskh Arabic (kelas f-trad tidak diberi kepada teks Jawi). */
+.rph-doc { --rph-ar-trad: "Traditional Arabic", "Noto Naskh Arabic", serif; }
+.rph-p.p-rtl.f-trad { font-family: var(--rph-ar-trad), var(--rph-lat); }
+.rph-p.p-ltr .ar.f-trad { font-family: var(--rph-ar-trad); }
+bdi.lat, bdi.ar { unicode-bidi: isolate; }
+.rph-lg.p-ltr { font-size: 12pt; }
+.rph-lg.p-rtl { font-size: 13.5pt; }
+.rph-sm { font-size: 8pt; }
+.p-rtl .rph-sm { font-size: 9.5pt; }
+.p-rtl .lat .rph-sm, .p-rtl .rph-sm .lat { font-size: 8pt; }
+.rph-muted { color: #444; }
+.rph-box { font-family: var(--rph-sym); font-size: 1em; }
+/* Kotak bilangan murid kosong (refleksi) — diisi dengan tangan selepas PdP */
+.rph-numbox { display: inline-block; width: 5.2mm; height: 1.1em; border: 0.75pt solid #000; vertical-align: middle; margin: 0 1px; line-height: 1; font-family: var(--rph-lat); overflow: hidden; }
+.rph-p:has(> .rph-numbox), .rph-p:has(.rph-numbox) bdi { white-space: nowrap; }
+.rph-table u { text-underline-offset: 2px; }
+
+/* Kotak semak (kaedah/instrumen/BBM/aspirasi) */
+.rph-checks { display: grid; gap: 0 6pt; }
+.rph-check .rph-p { min-height: 0; }
+
+/* Ralat pratonton */
+.rph-error { color: #7f1d1d; padding: 12mm; }
+
+/* Kawasan cetak tersembunyi pada skrin */
+#print-root { display: none; }
+
+/* ---------- Cetak ---------- */
+/* Kotak margin kosong → Chrome/Edge tidak mencetak pengepala/pengaki automatik (tajuk, tarikh,
+   alamat fail ".../RPH GENERATOR/...", nombor halaman) — keputusan guru 2026-10-02. Margin 12 mm dikekalkan. */
+@page {
+  size: A4 portrait; margin: 12mm;
+  @top-left { content: ""; } @top-center { content: ""; } @top-right { content: ""; }
+  @bottom-left { content: ""; } @bottom-center { content: ""; } @bottom-right { content: ""; }
+}
+
+@media print {
+  html, body { background: #fff !important; height: auto !important; }
+  body { margin: 0 !important; font-size: 10pt; }
+  /* Sembunyi kerangka aplikasi */
+  #sidebar, #topbar, .skip, #toasts, .modal-back, button, .btn, .btn-icon, .no-print, .page-head, .tabs, .notice { display: none !important; }
+  #shell { margin: 0 !important; min-height: 0 !important; display: block !important; }
+  #main { padding: 0 !important; max-width: none !important; }
+  /* RPH.print.rphs(): hanya #print-root dicetak */
+  body.rph-printing #shell, body.rph-printing #sidebar { display: none !important; }
+  body.rph-printing #print-root { display: block !important; }
+  #print-root:empty { display: none !important; }
+
+  .rph-doc, .rph-doc.mode-preview { padding: 0 !important; overflow: visible !important; }
+  .rph-page, .rph-doc.mode-preview .rph-page.a4 {
+    width: auto !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important;
+    box-shadow: none !important; border: none !important;
+  }
+  /* Setiap RPH bermula pada halaman baharu */
+  .rph-page + .rph-page { break-before: page; page-break-before: always; }
+  .rph-table { page-break-inside: auto; }
+  .rph-table tr, .rph-row { break-inside: avoid; page-break-inside: avoid; }
+  .rph-table tr.rph-row-tall { break-inside: auto; page-break-inside: auto; }
+  .rph-week-title, .rph-day-title, .rph-head { break-after: avoid; page-break-after: avoid; }
+  .rph-p.p-rtl { font-family: var(--font-ar, "Noto Naskh Arabic"), Arial, sans-serif; }
+  .rph-p.p-rtl.f-trad { font-family: var(--rph-ar-trad), Arial, sans-serif; }
+}
